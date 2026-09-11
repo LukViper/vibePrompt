@@ -1,0 +1,102 @@
+[
+  {
+    "id": 1,
+    "category": "vague",
+    "text": "help me with my essay"
+  },
+  {
+    "id": 2,
+    "category": "emotional_grill",
+    "text": "grill this resume hard, be brutal, don't sugarcoat anything"
+  },
+  {
+    "id": 3,
+    "category": "encourage",
+    "text": "i failed my midterm again... please be encouraging and help me make a study plan"
+  },
+  {
+    "id": 4,
+    "category": "simplify",
+    "text": "explain recursion like i'm 5, keep it simple"
+  },
+  {
+    "id": 5,
+    "category": "professional",
+    "text": "write a professional email to my professor asking for an extension, keep it polite"
+  },
+  {
+    "id": 6,
+    "category": "shorthand",
+    "text": "/grill this code review, roast the bad parts"
+  },
+  {
+    "id": 7,
+    "category": "vague",
+    "text": "make this better: my app is slow and users complain"
+  },
+  {
+    "id": 8,
+    "category": "emotional_mixed",
+    "text": "i need this presentation to sound confident but not arrogant, fix my draft vibes"
+  },
+  {
+    "id": 9,
+    "category": "academic",
+    "text": "compare SQL and NoSQL somehow for my DBMS assignment idk what to say"
+  },
+  {
+    "id": 10,
+    "category": "simplify",
+    "text": "what even is a transformer model? dumbed down please"
+  },
+  {
+    "id": 11,
+    "category": "grill",
+    "text": "be savage: critique my startup idea of another AI chatbot wrapper"
+  },
+  {
+    "id": 12,
+    "category": "encourage",
+    "text": "cheer me on while helping me rewrite this cover letter, i'm nervous"
+  },
+  {
+    "id": 13,
+    "category": "professional",
+    "text": "draft a formal project status update for stakeholders about a delay"
+  },
+  {
+    "id": 14,
+    "category": "vague_emotional",
+    "text": "ugh this bug is driving me crazy can you just fix my python loop or tell me what's wrong"
+  },
+  {
+    "id": 15,
+    "category": "constraints",
+    "text": "summarize this article in 5 bullets, no fluff, neutral tone"
+  },
+  {
+    "id": 16,
+    "category": "student",
+    "text": "idk how to start my ML project proposal can you like outline it"
+  },
+  {
+    "id": 17,
+    "category": "grill",
+    "text": "tear apart my argumentative essay thesis, find every weak spot"
+  },
+  {
+    "id": 18,
+    "category": "simplify",
+    "text": "explain git merge vs rebase simply for a first-year student"
+  },
+  {
+    "id": 19,
+    "category": "professional",
+    "text": "help me refuse a meeting invite politely but firmly"
+  },
+  {
+    "id": 20,
+    "category": "emotional_vague",
+    "text": "make my LinkedIn about section sound cooler without being cringe"
+  }
+]

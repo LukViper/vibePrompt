@@ -1,0 +1,38 @@
+# Secrets
+.env
+backend/.env
+*.pem
+*.key
+
+# Python
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+*.egg-info/
+
+# Nested git (important!)
+backend/.git/
+
+# Evaluation outputs
+evaluation/results.json
+evaluation/results/
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*~
+
+# Logs & temp
+*.log
+logs/
+tmp/
+temp/
+.cache/
