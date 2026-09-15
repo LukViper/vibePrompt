@@ -1,16 +1,21 @@
 {
   "manifest_version": 3,
   "name": "VibePrompt",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Intent & emotion aware prompt generator for ChatGPT. Why vibe code, when you can vibe prompt?",
   "permissions": ["storage", "activeTab"],
   "host_permissions": [
     "http://localhost:8000/*",
+    "http://127.0.0.1:8000/*",
     "https://chatgpt.com/*",
     "https://chat.openai.com/*"
   ],
   "background": {
     "service_worker": "background.js"
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
   },
   "content_scripts": [
     {
@@ -29,7 +34,7 @@
     "128": "icons/icon128.png"
   },
   "action": {
-    "default_title": "VibePrompt",
+    "default_title": "VibePrompt Settings",
     "default_icon": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png"

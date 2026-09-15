@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>VibePrompt Settings</title>
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body>
+    <main class="vp-opts">
+      <header class="vp-opts-header">
+        <div>
+          <h1>VibePrompt</h1>
+          <p class="vp-opts-tag">Why vibe code, when you can vibe prompt?</p>
+        </div>
+      </header>
+
+      <form id="settings-form" class="vp-opts-form" autocomplete="off">
+        <label class="vp-field">
+          <span class="vp-label">Groq API key</span>
+          <div class="vp-key-row">
+            <input
+              id="groqApiKey"
+              name="groqApiKey"
+              type="password"
+              placeholder="gsk_…"
+              spellcheck="false"
+              autocomplete="off"
+            />
+            <button type="button" id="toggle-key" class="vp-btn-secondary" aria-pressed="false">
+              Show
+            </button>
+          </div>
+          <span class="vp-hint"
+            >Stored only in this browser (<code>chrome.storage.local</code>). Get a free key at
+            <a href="https://console.groq.com/keys" target="_blank" rel="noopener noreferrer"
+              >console.groq.com/keys</a
+            >.</span
+          >
+        </label>
+
+        <label class="vp-field">
+          <span class="vp-label">Backend URL</span>
+          <input
+            id="apiBaseUrl"
+            name="apiBaseUrl"
+            type="url"
+            placeholder="http://localhost:8000"
+            spellcheck="false"
+          />
+          <span class="vp-hint">Local FastAPI server that runs analysis + schema assembly.</span>
+        </label>
+
+        <div class="vp-actions">
+          <button type="submit" class="vp-btn-primary">Save</button>
+          <button type="button" id="clear-key" class="vp-btn-secondary">Clear API key</button>
+        </div>
+
+        <p id="status" class="vp-status" role="status" aria-live="polite"></p>
+      </form>
+    </main>
+    <script src="options.js"></script>
+  </body>
+</html>

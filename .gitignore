@@ -1,38 +1,106 @@
-# Secrets
+# =============================================================================
+# VibePrompt — .gitignore
+# =============================================================================
+
+# ----- Secrets & local env -----
 .env
-backend/.env
+.env.*
+!.env.example
+!**/.env.example
 *.pem
 *.key
+*.p12
+*.pfx
+credentials.json
+secrets/
 
-# Python
+# ----- Python -----
 .venv/
 venv/
 env/
-__pycache__/
+**/__pycache__/
 *.py[cod]
 *$py.class
 *.so
-.pytest_cache/
+*.egg
 *.egg-info/
+.eggs/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+coverage.xml
 
-# Nested git (important!)
+# ----- Nested / vendored git checkouts -----
 backend/.git/
+prompting_books/book-to-skill/.git/
 
-# Evaluation outputs
+# ----- Node / frontend (if added later) -----
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.npm/
+.yarn/
+
+# ----- Chrome extension packaging -----
+*.crx
+web-ext-artifacts/
+.web-extension-id
+
+# ----- TypeScript -----
+*.tsbuildinfo
+
+# ----- Evaluation outputs -----
 evaluation/results.json
 evaluation/results/
+evaluation/*.out
 
-# OS / IDE
+# ----- Prompting books (heavy / regenerable) -----
+prompting_books/books/*.pdf
+prompting_books/books/*.zip
+prompting_books/extractions/
+prompting_books/book-to-skill/.venv/
+prompting_books/book-to-skill/**/__pycache__/
+prompting_books/book-to-skill/.pytest_cache/
+prompting_books/book-to-skill/*.egg-info/
+
+# ----- OS -----
 .DS_Store
+.DS_Store?
+._*
 Thumbs.db
+Desktop.ini
+
+# ----- Editors / IDEs -----
 .vscode/
 .idea/
+.cursor/
 *.swp
+*.swo
 *~
+*.sublime-project
+*.sublime-workspace
 
-# Logs & temp
+# ----- Logs & temp -----
 *.log
 logs/
 tmp/
 temp/
+.tmp/
 .cache/
+*.tmp
+*.bak
+*.orig
+
+# ----- Misc tooling -----
+.direnv/
+.python-version
+.tool-versions

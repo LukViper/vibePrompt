@@ -39,16 +39,41 @@
     return "";
   }
 
+  function friendlyRuntimeError(message) {
+    const raw = (message || "").trim();
+    const lower = raw.toLowerCase();
+    if (
+      lower.includes("extension context invalidated") ||
+      lower.includes("receiving end does not exist") ||
+      lower.includes("message port closed")
+    ) {
+      return (
+        "Extension was reloaded. Refresh this ChatGPT tab (Ctrl/Cmd+R), " +
+        "then click Generate again."
+      );
+    }
+    return raw || "Extension messaging failed";
+  }
+
   function requestVibe(text, tone) {
     return new Promise((resolve) => {
       try {
+        if (!chrome?.runtime?.id) {
+          resolve({
+            ok: false,
+            error:
+              "Extension was reloaded. Refresh this ChatGPT tab (Ctrl/Cmd+R), " +
+              "then click Generate again.",
+          });
+          return;
+        }
         chrome.runtime.sendMessage(
           { type: "VIBE_REQUEST", text, tone },
           (response) => {
             if (chrome.runtime.lastError) {
               resolve({
                 ok: false,
-                error: chrome.runtime.lastError.message || "Extension messaging failed",
+                error: friendlyRuntimeError(chrome.runtime.lastError.message),
               });
               return;
             }
@@ -58,7 +83,7 @@
       } catch (err) {
         resolve({
           ok: false,
-          error: err?.message || "Failed to message extension background",
+          error: friendlyRuntimeError(err?.message || "Failed to message extension background"),
         });
       }
     });

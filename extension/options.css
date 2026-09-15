@@ -1,0 +1,155 @@
+:root {
+  --bg: #0f1614;
+  --panel: #141c1a;
+  --border: #2d3c37;
+  --text: #e8f5f1;
+  --muted: #8aa399;
+  --accent: #3dcfb0;
+  --accent-dim: rgba(61, 207, 176, 0.16);
+  --danger: #e07070;
+  --font: "Segoe UI", "Helvetica Neue", system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: var(--font);
+  color: var(--text);
+  background:
+    radial-gradient(ellipse 80% 50% at 20% 0%, rgba(61, 207, 176, 0.12), transparent),
+    var(--bg);
+}
+
+.vp-opts {
+  width: min(440px, calc(100% - 32px));
+  margin: 40px auto;
+  padding: 24px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+}
+
+.vp-opts-header h1 {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.vp-opts-tag {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.vp-opts-form {
+  margin-top: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.vp-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.vp-label {
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.vp-key-row {
+  display: flex;
+  gap: 8px;
+}
+
+input[type="password"],
+input[type="text"],
+input[type="url"] {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: #0f1614;
+  color: var(--text);
+  font-size: 0.95rem;
+  outline: none;
+}
+
+input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-dim);
+}
+
+.vp-hint {
+  font-size: 0.78rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.vp-hint a {
+  color: var(--accent);
+}
+
+.vp-hint code {
+  font-size: 0.72rem;
+  background: #0f1614;
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.vp-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.vp-btn-primary,
+.vp-btn-secondary {
+  border: none;
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.vp-btn-primary {
+  background: var(--accent);
+  color: #062019;
+}
+
+.vp-btn-secondary {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.vp-btn-primary:hover,
+.vp-btn-secondary:hover {
+  filter: brightness(1.08);
+}
+
+.vp-status {
+  min-height: 1.2em;
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.vp-status.is-ok {
+  color: var(--accent);
+}
+
+.vp-status.is-error {
+  color: var(--danger);
+}

@@ -133,6 +133,53 @@
     `;
   }
 
+  function renderSchemaSummary(schema) {
+    if (!schema || typeof schema !== "object") return "";
+    const cells = [
+      ["Persona", schema.persona],
+      ["Audience", schema.audience],
+      ["Task", schema.task],
+      ["Format", schema.format],
+      ["Tonality", schema.tonality],
+    ].filter(([, v]) => typeof v === "string" && v.trim());
+
+    if (!cells.length) return "";
+
+    const patternBits = [];
+    const p = schema.patterns || {};
+    if (p.usePersona) patternBits.push("Persona");
+    if (p.useTemplate) patternBits.push("Template");
+    if (p.useReflection) patternBits.push("Reflection");
+    if (p.useContextManager) patternBits.push("Context Mgr");
+
+    return `
+      <div class="vp-section">
+        <span class="vp-label">Schema (CO-STAR / Canvas)</span>
+        <div class="vp-chips">
+          ${cells
+            .map(
+              ([label, value]) =>
+                `<span class="vp-chip" title="${escapeHtml(value)}"><strong>${escapeHtml(
+                  label
+                )}</strong>${escapeHtml(
+                  value.length > 72 ? `${value.slice(0, 72)}…` : value
+                )}</span>`
+            )
+            .join("")}
+        </div>
+        ${
+          patternBits.length
+            ? `<div class="vp-chips" style="margin-top:6px">
+                 ${patternBits
+                   .map((b) => `<span class="vp-chip"><strong>Pattern</strong>${escapeHtml(b)}</span>`)
+                   .join("")}
+               </div>`
+            : ""
+        }
+      </div>
+    `;
+  }
+
   function renderResult(data) {
     const chips = `
       <div class="vp-chips">
@@ -160,6 +207,11 @@
         }" data-tone="${t}">${t}</button>`
     ).join("");
 
+    const assembled =
+      data.optimized_prompt ||
+      data.schema?.generatedPrompt ||
+      "";
+
     return `
       <div class="vp-section">
         <span class="vp-label">Original</span>
@@ -170,15 +222,14 @@
         ${chips}
       </div>
       ${constraints}
+      ${renderSchemaSummary(data.schema)}
       <div class="vp-section">
         <span class="vp-label">Tone override</span>
         <div class="vp-tones">${tones}</div>
       </div>
       <div class="vp-section">
         <span class="vp-label">Optimized prompt</span>
-        <textarea class="vp-prompt" spellcheck="true">${escapeHtml(
-          data.optimized_prompt || ""
-        )}</textarea>
+        <textarea class="vp-prompt" spellcheck="true">${escapeHtml(assembled)}</textarea>
       </div>
       <div class="vp-actions">
         <button type="button" class="vp-btn vp-btn-primary" data-action="copy">Copy</button>
@@ -189,7 +240,17 @@
     `;
   }
 
-  function renderError(original, message) {
+  function openSettings() {
+    try {
+      chrome.runtime.sendMessage({ type: "OPEN_OPTIONS" }, () => {
+        void chrome.runtime.lastError;
+      });
+    } catch {
+      // Extension context may be invalidated — user must refresh / open options manually
+    }
+  }
+
+  function renderError(original, message, needsKey) {
     return `
       <div class="vp-section">
         <span class="vp-label">Original</span>
@@ -197,7 +258,14 @@
       </div>
       <div class="vp-empty">${escapeHtml(message)}</div>
       <div class="vp-actions">
-        <button type="button" class="vp-btn vp-btn-primary" data-action="regenerate">Try again</button>
+        ${
+          needsKey
+            ? `<button type="button" class="vp-btn vp-btn-primary" data-action="settings">Settings</button>`
+            : ""
+        }
+        <button type="button" class="vp-btn ${
+          needsKey ? "vp-btn-secondary" : "vp-btn-primary"
+        }" data-action="regenerate">Try again</button>
         <button type="button" class="vp-btn vp-btn-secondary" data-action="generate">New</button>
       </div>
       <div class="vp-status is-error"></div>
@@ -218,6 +286,7 @@
             <p class="vp-tagline">Why vibe code, when you can vibe prompt?</p>
           </div>
           <div class="vp-window-actions">
+            <button type="button" class="vp-win-btn" data-action="settings" title="Settings" aria-label="Settings">⚙</button>
             <button type="button" class="vp-win-btn" data-action="minimize" title="Minimize" aria-label="Minimize">–</button>
             <button type="button" class="vp-win-btn" data-action="exit" title="Exit" aria-label="Exit">×</button>
           </div>
@@ -257,6 +326,7 @@
       else if (action === "copy") handleCopy();
       else if (action === "regenerate") handleRegenerate();
       else if (action === "generate") handleGenerate();
+      else if (action === "settings") openSettings();
     });
 
     return root;
@@ -295,7 +365,13 @@
     if (!getRoot()) return;
 
     if (!result.ok) {
-      setBody(renderError(text, result.error || "Request failed"));
+      setBody(
+        renderError(
+          text,
+          result.error || "Request failed",
+          Boolean(result.needsKey)
+        )
+      );
       return;
     }
 

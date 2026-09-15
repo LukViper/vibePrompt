@@ -12,6 +12,7 @@ Intent & emotion aware prompt generator for ChatGPT. A Chrome extension plus a F
 - Reads the text currently typed in the ChatGPT composer
 - Detects **intent** and **emotion/tone**
 - Optional tone overrides: `Grill` · `Neutral` · `Encourage` · `Simplify` · `Professional`
+- **Set your Groq API key in the extension Settings** (toolbar icon) — no `.env` required
 - Shows original input, analysis chips, and an editable optimized prompt
 - **Copy**, **Regenerate**, **Minimize (–)**, and **Exit (×)**
 - After exit, a small **V** button restores the panel
@@ -24,17 +25,19 @@ Intent & emotion aware prompt generator for ChatGPT. A Chrome extension plus a F
 ChatGPT composer  →  Extension panel  →  FastAPI backend  →  Groq LLM
                                               │
                                     1. Analyze intent + emotion
-                                    2. Generate optimized prompt
+                                    2. Fill VibePromptSchema (Canvas + CO-STAR)
+                                    3. Assemble generatedPrompt deterministically
                                               │
                                               ▼
-                                    Panel shows result → Copy → paste into ChatGPT
+                                    Panel shows schema + prompt → Copy → ChatGPT
 ```
 
 | Layer | Tech | Role |
 |-------|------|------|
 | Extension | Chrome Manifest V3 | UI + read ChatGPT input |
 | Backend | Python FastAPI | NLP pipeline API |
-| Model | Groq (`openai/gpt-oss-20b` by default) | Intent analysis + prompt rewrite |
+| Model | Groq (`openai/gpt-oss-20b` by default) | Intent analysis + structured schema rewrite |
+| Schema | CO-STAR + Prompt Canvas (+ White patterns) | Type-safe prompt cells → assembled output |
 | Target chat | ChatGPT | Where you paste and run the optimized prompt |
 
 ---
@@ -45,7 +48,8 @@ ChatGPT composer  →  Extension panel  →  FastAPI backend  →  Groq LLM
 project/
 ├── extension/                 # Chrome extension (load unpacked)
 │   ├── manifest.json
-│   ├── background.js          # Proxies requests to the backend
+│   ├── options.html           # API key + backend URL settings
+│   ├── background.js          # Proxies requests (+ sends API key)
 │   ├── content/               # Panel UI + ChatGPT input capture
 │   └── icons/
 ├── backend/                   # FastAPI + Groq NLP pipeline
@@ -56,9 +60,22 @@ project/
 │   ├── requirements.txt
 │   └── .env.example
 ├── evaluation/                # Sample prompts + eval runner
+├── shared/                    # TypeScript VibePromptSchema (source of truth)
 ├── VibePrompt_Project_Idea.md # Original project brief
 └── README.md
 ```
+
+### Structured prompt schema
+
+Generation no longer returns free-form text alone. The backend fills a
+**VibePromptSchema** (Canvas + CO-STAR cells, optional White patterns), then
+**deterministically assembles** `generatedPrompt` / `optimized_prompt`.
+
+- TypeScript: [`shared/vibe-prompt-schema.ts`](shared/vibe-prompt-schema.ts)
+- Python: `backend/app/nlp/vibe_schema.py` + `assembler.py`
+- API: `POST /api/vibe` response includes `schema` (full object) and
+  `optimized_prompt` (same as `schema.generatedPrompt`, for extension compat)
+
 
 ---
 
@@ -77,13 +94,15 @@ cd backend
 python3 -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-cp .env.example .env
+cp .env.example .env               # optional — model/host only if you want
 ```
 
-Edit `backend/.env`:
+You can leave `GROQ_API_KEY` empty in `.env` and set the key in the **extension Settings** instead. If both are set, the **extension key wins** for that request.
+
+Edit `backend/.env` (optional):
 
 ```env
-GROQ_API_KEY=your_groq_api_key_here
+# GROQ_API_KEY=...   # optional fallback; prefer extension Settings
 GROQ_MODEL=openai/gpt-oss-20b
 HOST=0.0.0.0
 PORT=8000
@@ -118,6 +137,15 @@ curl -s http://127.0.0.1:8000/api/vibe \
 4. Click **Load unpacked**
 5. Select the `extension/` folder in this repo
 6. Open [https://chatgpt.com](https://chatgpt.com)
+
+### API key (extension Settings)
+
+1. Click the **VibePrompt** icon in the Chrome toolbar (or the **⚙** on the panel)
+2. Paste your [Groq API key](https://console.groq.com/keys)
+3. Confirm backend URL is `http://localhost:8000` (or your server)
+4. Click **Save**, then refresh ChatGPT
+
+The key is stored in `chrome.storage.local` on your machine and sent to the local backend only for `/api/vibe` requests.
 
 The **VibePrompt** panel should appear in the **top-right** automatically.
 
