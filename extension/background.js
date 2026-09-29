@@ -8,12 +8,20 @@ function storageGet(area, defaults) {
 
 async function getSettings() {
   const [local, sync] = await Promise.all([
-    storageGet("local", { groqApiKey: "" }),
+    storageGet("local", {
+      groqApiKey: "",
+      userProfile: null,
+      learningContext: null,
+      onboardingComplete: false,
+    }),
     storageGet("sync", { apiBaseUrl: DEFAULT_API_BASE }),
   ]);
   return {
     groqApiKey: (local.groqApiKey || "").trim(),
     apiBaseUrl: (sync.apiBaseUrl || DEFAULT_API_BASE).replace(/\/+$/, ""),
+    userProfile: local.userProfile || null,
+    learningContext: local.learningContext || null,
+    onboardingComplete: Boolean(local.onboardingComplete),
   };
 }
 
@@ -44,21 +52,67 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     return false;
   }
 
+  if (message?.type === "GET_PROFILE_STATE") {
+    getSettings()
+      .then((s) =>
+        sendResponse({
+          ok: true,
+          onboardingComplete: s.onboardingComplete,
+          userProfile: s.userProfile,
+          learningContext: s.learningContext,
+        })
+      )
+      .catch((err) => sendResponse({ ok: false, error: err?.message || "storage error" }));
+    return true;
+  }
+
+  if (message?.type === "SAVE_PROFILE") {
+    chrome.storage.local.set(
+      {
+        userProfile: message.profile || null,
+        onboardingComplete: true,
+      },
+      () => sendResponse({ ok: !chrome.runtime.lastError })
+    );
+    return true;
+  }
+
+  if (message?.type === "SAVE_LEARNING_CONTEXT") {
+    chrome.storage.local.set(
+      { learningContext: message.learningContext || null },
+      () => sendResponse({ ok: !chrome.runtime.lastError })
+    );
+    return true;
+  }
+
+  if (message?.type === "RESET_ONBOARDING") {
+    chrome.storage.local.set(
+      { onboardingComplete: false, userProfile: null },
+      () => sendResponse({ ok: !chrome.runtime.lastError })
+    );
+    return true;
+  }
+
   if (message?.type !== "VIBE_REQUEST") {
     return false;
   }
 
   (async () => {
     try {
-      const { apiBaseUrl, groqApiKey } = await getSettings();
+      const { apiBaseUrl, groqApiKey, userProfile, learningContext } = await getSettings();
       const headers = { "Content-Type": "application/json" };
       if (groqApiKey) {
         headers["X-Groq-Api-Key"] = groqApiKey;
       }
 
       const body = {
+        prompt: message.text,
         text: message.text,
         tone: message.tone || null,
+        conversation_context: message.conversation_context || [],
+        user_profile: message.user_profile || userProfile || null,
+        learning_context: message.learning_context || learningContext || null,
+        personal_vocabulary: message.personal_vocabulary || null,
       };
       if (groqApiKey) {
         body.api_key = groqApiKey;
@@ -83,6 +137,14 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
             ? `${detail} Open VibePrompt Settings (extension icon) and paste your Groq API key.`
             : detail,
           needsKey: Boolean(needsKey),
+          // Soft fallback payload so UI can offer original
+          fallback: {
+            decision: "pass",
+            original: message.text,
+            optimized_prompt: message.text,
+            changes: ["VibePrompt unavailable — using original"],
+            estimated_token_change: 0,
+          },
         });
         return;
       }
@@ -94,6 +156,13 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         error:
           err?.message ||
           "Could not reach VibePrompt backend. Is it running on localhost:8000?",
+        fallback: {
+          decision: "pass",
+          original: message.text,
+          optimized_prompt: message.text,
+          changes: ["Backend unreachable — using original"],
+          estimated_token_change: 0,
+        },
       });
     }
   })();

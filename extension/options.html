@@ -11,7 +11,7 @@
       <header class="vp-opts-header">
         <div>
           <h1>VibePrompt</h1>
-          <p class="vp-opts-tag">Why vibe code, when you can vibe prompt?</p>
+          <p class="vp-opts-tag">Minimal · personalized · context-aware</p>
         </div>
       </header>
 
@@ -32,7 +32,7 @@
             </button>
           </div>
           <span class="vp-hint"
-            >Stored only in this browser (<code>chrome.storage.local</code>). Get a free key at
+            >Stored only in this browser. Get a key at
             <a href="https://console.groq.com/keys" target="_blank" rel="noopener noreferrer"
               >console.groq.com/keys</a
             >.</span
@@ -48,12 +48,21 @@
             placeholder="http://localhost:8000"
             spellcheck="false"
           />
-          <span class="vp-hint">Local FastAPI server that runs analysis + schema assembly.</span>
         </label>
+
+        <fieldset class="vp-field">
+          <legend class="vp-label">Learning context (optional)</legend>
+          <input id="lcSubject" type="text" placeholder="Subject — e.g. Operating Systems" />
+          <input id="lcResource" type="text" placeholder="Resource — e.g. Operating System Concepts" />
+          <input id="lcTopic" type="text" placeholder="Current topic — e.g. Process Management" />
+          <input id="lcLevel" type="text" placeholder="Level — beginner / intermediate / advanced" />
+          <span class="vp-hint">Used only when relevant to the current prompt.</span>
+        </fieldset>
 
         <div class="vp-actions">
           <button type="submit" class="vp-btn-primary">Save</button>
           <button type="button" id="clear-key" class="vp-btn-secondary">Clear API key</button>
+          <button type="button" id="reset-profile" class="vp-btn-secondary">Reset profile</button>
         </div>
 
         <p id="status" class="vp-status" role="status" aria-live="polite"></p>

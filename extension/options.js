@@ -6,6 +6,11 @@ const baseInput = document.getElementById("apiBaseUrl");
 const statusEl = document.getElementById("status");
 const toggleBtn = document.getElementById("toggle-key");
 const clearBtn = document.getElementById("clear-key");
+const resetProfileBtn = document.getElementById("reset-profile");
+const lcSubject = document.getElementById("lcSubject");
+const lcResource = document.getElementById("lcResource");
+const lcTopic = document.getElementById("lcTopic");
+const lcLevel = document.getElementById("lcLevel");
 
 function setStatus(message, kind) {
   statusEl.textContent = message || "";
@@ -14,8 +19,13 @@ function setStatus(message, kind) {
 }
 
 function loadSettings() {
-  chrome.storage.local.get({ groqApiKey: "" }, (local) => {
+  chrome.storage.local.get({ groqApiKey: "", learningContext: null }, (local) => {
     keyInput.value = local.groqApiKey || "";
+    const lc = local.learningContext || {};
+    lcSubject.value = lc.subject || "";
+    lcResource.value = lc.resource || "";
+    lcTopic.value = lc.current_topic || "";
+    lcLevel.value = lc.level || "";
   });
   chrome.storage.sync.get({ apiBaseUrl: DEFAULT_API_BASE }, (sync) => {
     baseInput.value = sync.apiBaseUrl || DEFAULT_API_BASE;
@@ -29,7 +39,6 @@ form.addEventListener("submit", (event) => {
   apiBaseUrl = apiBaseUrl.replace(/\/+$/, "");
 
   try {
-    // Validate URL shape without forcing a network call
     // eslint-disable-next-line no-new
     new URL(apiBaseUrl);
   } catch {
@@ -37,20 +46,29 @@ form.addEventListener("submit", (event) => {
     return;
   }
 
-  chrome.storage.local.set({ groqApiKey }, () => {
-    chrome.storage.sync.set({ apiBaseUrl }, () => {
-      if (chrome.runtime.lastError) {
-        setStatus(chrome.runtime.lastError.message || "Save failed", "is-error");
-        return;
-      }
-      setStatus(
-        groqApiKey
-          ? "Saved. Refresh any open ChatGPT tab, then Generate."
-          : "Saved backend URL. API key is empty — set a Groq key or use backend/.env.",
-        "is-ok"
-      );
-    });
-  });
+  const learningContext = {
+    subject: lcSubject.value.trim(),
+    resource: lcResource.value.trim(),
+    current_topic: lcTopic.value.trim(),
+    level: lcLevel.value.trim(),
+  };
+  const hasLearning = Object.values(learningContext).some(Boolean);
+
+  chrome.storage.local.set(
+    {
+      groqApiKey,
+      learningContext: hasLearning ? learningContext : null,
+    },
+    () => {
+      chrome.storage.sync.set({ apiBaseUrl }, () => {
+        if (chrome.runtime.lastError) {
+          setStatus(chrome.runtime.lastError.message || "Save failed", "is-error");
+          return;
+        }
+        setStatus("Saved. Refresh open ChatGPT tabs.", "is-ok");
+      });
+    }
+  );
 });
 
 toggleBtn.addEventListener("click", () => {
@@ -64,6 +82,12 @@ clearBtn.addEventListener("click", () => {
   keyInput.value = "";
   chrome.storage.local.remove("groqApiKey", () => {
     setStatus("API key cleared from this browser.", "is-ok");
+  });
+});
+
+resetProfileBtn.addEventListener("click", () => {
+  chrome.storage.local.set({ onboardingComplete: false, userProfile: null }, () => {
+    setStatus("Profile reset. Re-open ChatGPT to redo onboarding.", "is-ok");
   });
 });
 

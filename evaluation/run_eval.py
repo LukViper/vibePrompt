@@ -20,10 +20,12 @@ def estimate_tokens(text: str) -> int:
     return max(1, int(round(words * 1.3))) if text.strip() else 0
 
 
-def call_vibe(text: str, tone: str | None = None) -> dict:
-    payload = {"text": text}
+def call_vibe(text: str, tone: str | None = None, profile: dict | None = None) -> dict:
+    payload: dict = {"prompt": text, "text": text}
     if tone:
         payload["tone"] = tone
+    if profile:
+        payload["user_profile"] = profile
     body = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(
         API,
@@ -46,22 +48,28 @@ def main() -> int:
             "category": sample.get("category"),
             "original": text,
             "original_token_est": estimate_tokens(text),
-            "intent": None,
-            "emotion": None,
+            "decision": None,
             "optimized_prompt": None,
-            "optimized_token_est": None,
+            "changes": None,
+            "estimated_token_change": None,
+            "used_llm": None,
             "error": None,
             "human_clarity": None,
             "human_relevance": None,
             "human_emotional_fidelity": None,
         }
         try:
-            data = call_vibe(text)
-            row["intent"] = data.get("intent")
-            row["emotion"] = data.get("emotion")
+            data = call_vibe(text, sample.get("tone"), sample.get("profile"))
+            row["decision"] = data.get("decision")
+            row["normalized_prompt"] = data.get("normalized_prompt")
             row["optimized_prompt"] = data.get("optimized_prompt")
-            row["optimized_token_est"] = estimate_tokens(data.get("optimized_prompt") or "")
-            print(f"[ok] #{sample['id']}")
+            row["recovery_changes"] = data.get("recovery_changes")
+            row["changes"] = data.get("changes")
+            row["confidence"] = data.get("confidence")
+            row["noise_score"] = data.get("noise_score")
+            row["estimated_token_change"] = data.get("estimated_token_change")
+            row["used_llm"] = data.get("used_llm")
+            print(f"[ok] #{sample['id']} → {data.get('decision')}")
         except urllib.error.URLError as exc:
             row["error"] = f"API unreachable: {exc}"
             print(f"[fail] #{sample['id']}: {row['error']}", file=sys.stderr)

@@ -1,255 +1,189 @@
 # VibePrompt
 
-**Why vibe code, when you can vibe prompt?**
+**Personalized, context-aware prompt adaptation for AI conversations.**
 
-Intent & emotion aware prompt generator for ChatGPT. A Chrome extension plus a FastAPI backend that reads your rough chat input, detects intent and emotional tone, and returns a clear, copy-ready prompt.
+> VibePrompt learns how you communicate and learn, understands the current conversation, and makes **only the changes that actually help** — without bloating your prompts.
 
 ---
 
-## Features
+## What changed (v2.1 — revised plan)
 
-- Auto-opens a **top-right panel** on ChatGPT (no keyboard shortcut required)
-- Reads the text currently typed in the ChatGPT composer
-- Detects **intent** and **emotion/tone**
-- Optional tone overrides: `Grill` · `Neutral` · `Encourage` · `Simplify` · `Professional`
-- **Set your Groq API key in the extension Settings** (toolbar icon) — no `.env` required
-- Shows original input, analysis chips, and an editable optimized prompt
-- **Copy**, **Regenerate**, **Minimize (–)**, and **Exit (×)**
-- After exit, a small **V** button restores the panel
+- **NLP recovery** before adapt (edit distance + char n-grams + generic abbreviations)
+- **Personal vocabulary** stored locally in the browser (`personalModel.js`)
+- **`POST /api/v1/adapt`** — v1 response shape (`normalized_prompt`, `adapted_prompt`, `confidence`)
+- **Quick setup** onboarding (~30s) + **Advanced** ChatGPT JSON onboarding
+- **ASK** clarifications → **Ask this in ChatGPT** (no invented topics)
+- **Live composer sync** tracks typing separately from last adapted result
+
+## What changed (v2)
+
+| Old | New |
+|-----|-----|
+| Always rewrite into a large “perfect” prompt | **PASS / ADAPT / ASK** decision engine |
+| Two LLM calls (analyze + generate) | **0 calls** when clear, **1 call** when adapting |
+| Generic optimization | Profile + conversation + learning context |
+| Copy-only UI | **Use adapted** / **Use original** into ChatGPT |
 
 ---
 
 ## How it works
 
 ```
-ChatGPT composer  →  Extension panel  →  FastAPI backend  →  Groq LLM
-                                              │
-                                    1. Analyze intent + emotion
-                                    2. Fill VibePromptSchema (Canvas + CO-STAR)
-                                    3. Assemble generatedPrompt deterministically
-                                              │
-                                              ▼
-                                    Panel shows schema + prompt → Copy → ChatGPT
+User prompt + chat context + profile + learning context
+                         ↓
+                 Decision engine
+              /        |         \
+           PASS      ADAPT       ASK
+            │          │          │
+         original   minimal   clarification
+                    rewrite
 ```
 
-| Layer | Tech | Role |
-|-------|------|------|
-| Extension | Chrome Manifest V3 | UI + read ChatGPT input |
-| Backend | Python FastAPI | NLP pipeline API |
-| Model | Groq (`openai/gpt-oss-20b` by default) | Intent analysis + structured schema rewrite |
-| Schema | CO-STAR + Prompt Canvas (+ White patterns) | Type-safe prompt cells → assembled output |
-| Target chat | ChatGPT | Where you paste and run the optimized prompt |
+Priority (never overridden incorrectly):
+
+1. Explicit current instruction  
+2. Conversation context  
+3. Explicit user preferences  
+4. Learned preferences (future)  
+5. Detected emotion/vibe (supporting only)  
+6. Defaults  
 
 ---
 
-## Project structure
+## Quick start
 
-```
-project/
-├── extension/                 # Chrome extension (load unpacked)
-│   ├── manifest.json
-│   ├── options.html           # API key + backend URL settings
-│   ├── background.js          # Proxies requests (+ sends API key)
-│   ├── content/               # Panel UI + ChatGPT input capture
-│   └── icons/
-├── backend/                   # FastAPI + Groq NLP pipeline
-│   ├── app/
-│   │   ├── main.py            # /health , /api/vibe
-│   │   ├── schemas.py
-│   │   └── nlp/               # analyzer → generator
-│   ├── requirements.txt
-│   └── .env.example
-├── evaluation/                # Sample prompts + eval runner
-├── shared/                    # TypeScript VibePromptSchema (source of truth)
-├── VibePrompt_Project_Idea.md # Original project brief
-└── README.md
-```
-
-### Structured prompt schema
-
-Generation no longer returns free-form text alone. The backend fills a
-**VibePromptSchema** (Canvas + CO-STAR cells, optional White patterns), then
-**deterministically assembles** `generatedPrompt` / `optimized_prompt`.
-
-- TypeScript: [`shared/vibe-prompt-schema.ts`](shared/vibe-prompt-schema.ts)
-- Python: `backend/app/nlp/vibe_schema.py` + `assembler.py`
-- API: `POST /api/vibe` response includes `schema` (full object) and
-  `optimized_prompt` (same as `schema.generatedPrompt`, for extension compat)
-
-
----
-
-## Prerequisites
-
-- Google Chrome (or Chromium)
-- Python 3.10+
-- A free [Groq API key](https://console.groq.com/keys)
-
----
-
-## 1. Backend setup
+### Backend
 
 ```bash
 cd backend
-python3 -m venv .venv
-source .venv/bin/activate          # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-cp .env.example .env               # optional — model/host only if you want
-```
-
-You can leave `GROQ_API_KEY` empty in `.env` and set the key in the **extension Settings** instead. If both are set, the **extension key wins** for that request.
-
-Edit `backend/.env` (optional):
-
-```env
-# GROQ_API_KEY=...   # optional fallback; prefer extension Settings
-GROQ_MODEL=openai/gpt-oss-20b
-HOST=0.0.0.0
-PORT=8000
-```
-
-Start the server:
-
-```bash
+source .venv/bin/activate   # or: python3 -m venv .venv && pip install -r requirements.txt
+cp .env.example .env        # set GROQ_API_KEY if not using extension settings
 uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-Check it is alive:
+Health: http://127.0.0.1:8000/health
 
-- Health: [http://127.0.0.1:8000/health](http://127.0.0.1:8000/health)
-- Docs: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+### Extension
 
-Example API call:
-
-```bash
-curl -s http://127.0.0.1:8000/api/vibe \
-  -H 'Content-Type: application/json' \
-  -d '{"text":"grill this essay hard, make it savage","tone":"Grill"}'
-```
+1. `chrome://extensions` → Developer mode → **Load unpacked** → `extension/`
+2. Click the extension icon → paste Groq API key (or use `backend/.env`)
+3. Open [chatgpt.com](https://chatgpt.com)
+4. Open [chatgpt.com](https://chatgpt.com)
+5. **Profile setup:** paste the setup prompt into ChatGPT, answer its questions, paste the JSON result into VibePrompt → **Save profile** (or skip)
+6. Type in ChatGPT — the panel **previews** your text (no API call)
+7. Click **Adapt now** once — that is the only Groq call for that prompt
+8. Review PASS / ADAPT / ASK → **Use adapted** or **Original**
 
 ---
 
-## 2. Extension setup
-
-1. Make sure the backend is running on port **8000**
-2. Open `chrome://extensions`
-3. Enable **Developer mode**
-4. Click **Load unpacked**
-5. Select the `extension/` folder in this repo
-6. Open [https://chatgpt.com](https://chatgpt.com)
-
-### API key (extension Settings)
-
-1. Click the **VibePrompt** icon in the Chrome toolbar (or the **⚙** on the panel)
-2. Paste your [Groq API key](https://console.groq.com/keys)
-3. Confirm backend URL is `http://localhost:8000` (or your server)
-4. Click **Save**, then refresh ChatGPT
-
-The key is stored in `chrome.storage.local` on your machine and sent to the local backend only for `/api/vibe` requests.
-
-The **VibePrompt** panel should appear in the **top-right** automatically.
-
-### Using the panel
-
-1. Type a rough / emotional prompt in the ChatGPT input box  
-   Example: `i failed my midterm again... help me make a study plan, be encouraging`
-2. Click **Generate** in the VibePrompt panel
-3. Review intent, emotion, and the optimized prompt
-4. Optionally pick a tone chip and click **Regenerate**
-5. Click **Copy**, paste into ChatGPT, and send
-
-**Window controls**
+## Panel controls
 
 | Control | Action |
 |---------|--------|
-| **–** | Minimize the panel |
-| **×** | Exit / hide the panel |
-| **V** (after exit) | Restore the panel |
-
-After changing extension files, click **Reload** on `chrome://extensions`, then refresh ChatGPT.
+| **Adapt** | Run decision engine on the composer text |
+| **Use adapted** | Insert adapted prompt into ChatGPT |
+| **Original** | Insert original prompt |
+| Tone chips | Grill / Neutral / Encourage / Simplify / Professional |
+| **Profile** | Re-run onboarding |
+| **– / ×** | Minimize / exit (V restores) |
 
 ---
 
-## API reference
-
-### `GET /health`
-
-```json
-{ "status": "ok", "model": "openai/gpt-oss-20b" }
-```
+## API
 
 ### `POST /api/vibe`
 
-Request:
-
 ```json
 {
-  "text": "explain recursion like i'm 5",
-  "tone": "Simplify"
+  "prompt": "bro explain deadlock",
+  "tone": null,
+  "conversation_context": [
+    { "role": "user", "content": "explain processes" },
+    { "role": "assistant", "content": "..." }
+  ],
+  "user_profile": {
+    "learning_preferences": ["analogies", "examples"],
+    "response_length": "short",
+    "technical_level": "beginner",
+    "preferred_tone": "friendly"
+  },
+  "learning_context": {
+    "subject": "Operating Systems",
+    "current_topic": "Process Management"
+  }
 }
 ```
-
-`tone` is optional. Allowed values: `Grill`, `Neutral`, `Encourage`, `Simplify`, `Professional`.
 
 Response:
 
 ```json
 {
-  "original": "...",
-  "intent": "...",
-  "emotion": "...",
-  "constraints": ["..."],
-  "optimized_prompt": "..."
+  "decision": "adapt",
+  "original": "bro explain deadlock",
+  "optimized_prompt": "Explain deadlock simply using a real-world analogy and one concise example.",
+  "changes": ["Added analogy preference", "Kept concise length"],
+  "estimated_token_change": 8,
+  "original_tokens": 5,
+  "optimized_tokens": 13,
+  "used_llm": true
 }
 ```
 
+`decision: "pass"` → no rewrite, often **zero LLM calls**.
+
+### Other routes
+
+- `GET /api/health`
+- `GET /api/onboarding` — question list
+- `POST /api/onboarding` — `{ "answers": ["...", ...] }` → profile
+- `POST /api/profile` — validate a client profile
+
 ---
 
-## NLP pipeline
+## Project layout
 
-1. **Analyze** — Groq returns JSON: `intent`, `emotion`, `constraints`, `style_notes` (one repair retry if parsing fails)
-2. **Generate** — second call turns that analysis into one structured ChatGPT-ready prompt
+```
+backend/app/
+  main.py                 # API routes
+  models/prompt.py        # Request/response + profile models
+  services/
+    decision_engine.py    # Heuristic PASS/ASK bypass
+    optimizer.py          # Single-call minimal adapter
+    profile_engine.py     # Onboarding → profile
+    token_counter.py
+    tones.py
+  nlp/client.py           # Groq client (key stays server-side)
 
-The Groq API key stays on the server only. The extension never sees it.
+extension/
+  content/                # Panel + ChatGPT context capture
+  background.js           # Proxy + profile storage
+  options.html            # API key + learning context
+```
 
 ---
 
 ## Evaluation
 
-Sample set and runner live in [`evaluation/`](evaluation/):
-
 ```bash
-# backend must be running
 cd backend && source .venv/bin/activate
 python ../evaluation/run_eval.py
 ```
 
-See [`evaluation/README.md`](evaluation/README.md) for the full comparison plan.
+See [`evaluation/README.md`](evaluation/README.md). Metrics now include decision rates and token Δ.
 
 ---
 
-## Out of scope (MVP)
+## Out of scope (for now)
 
-- Auto-pasting into ChatGPT
-- Sites other than ChatGPT
-- File / image inputs
-- Prompt history or user accounts
-- Offline / local models (e.g. Ollama)
+- Full textbook RAG / PDF chapter graphs  
+- Automatic preference learning from long history  
+- Auto-send into ChatGPT  
+- Sites other than ChatGPT  
 
----
-
-## Troubleshooting
-
-| Issue | Fix |
-|-------|-----|
-| Panel does not appear | Reload the extension, refresh ChatGPT, confirm it is loaded for `chatgpt.com` |
-| “Could not reach backend” | Start uvicorn on `127.0.0.1:8000` |
-| `GROQ_API_KEY is not set` | Put your key in `backend/.env` and restart the server |
-| Model 404 / no access | Set another model in `.env`, e.g. one listed in your [Groq console](https://console.groq.com/docs/models) |
-| Generate says type something first | Focus the ChatGPT composer and type text before Generate |
+See [`update.md`](update.md) for the full product vision and later phases.
 
 ---
 
 ## License
 
-Academic / course project — free to use for learning and demos.
+Academic / course project — free for learning and demos.
