@@ -1,4 +1,4 @@
-"""VibePrompt FastAPI — recovery + minimal personalized adaptation."""
+"""VibePrompt FastAPI — recovery + minimal context-aware adaptation."""
 
 from __future__ import annotations
 
@@ -13,23 +13,19 @@ from pydantic import BaseModel, Field
 
 from app.models.prompt import (
     HealthResponse,
-    OnboardingAnswers,
-    ProfileResponse,
-    UserProfile,
     VibeRequest,
     VibeResponse,
 )
 from app.nlp.client import GroqError, get_model, use_api_key
 from app.services.pipeline import run_adapt_pipeline
-from app.services.profile_engine import ONBOARDING_QUESTIONS, profile_from_onboarding
 from app.services.tones import VALID_TONES
 
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 app = FastAPI(
     title="VibePrompt API",
-    description="Personalized, context-aware, minimal prompt adaptation",
-    version="2.1.0",
+    description="Context-aware, minimal prompt adaptation for GenAI chats",
+    version="2.2.0",
 )
 
 app.add_middleware(
@@ -76,22 +72,6 @@ async def health() -> HealthResponse:
     return HealthResponse(status="ok", model=get_model())
 
 
-@app.get("/api/onboarding")
-async def onboarding_questions() -> dict:
-    return {"questions": ONBOARDING_QUESTIONS}
-
-
-@app.post("/api/onboarding", response_model=ProfileResponse)
-async def onboarding_submit(body: OnboardingAnswers) -> ProfileResponse:
-    profile = profile_from_onboarding(body)
-    return ProfileResponse(profile=profile, source="onboarding")
-
-
-@app.post("/api/profile", response_model=ProfileResponse)
-async def save_profile(profile: UserProfile) -> ProfileResponse:
-    return ProfileResponse(profile=profile, source="client")
-
-
 def _resolve_request_api_key(
     body_key: Optional[str],
     header_key: Optional[str],
@@ -123,8 +103,6 @@ async def _handle_adapt(request: VibeRequest, api_key: Optional[str]) -> VibeRes
             return await run_adapt_pipeline(
                 prompt,
                 tone=tone,
-                profile=request.user_profile,
-                learning_context=request.learning_context,
                 conversation_context=conversation,
                 personal_vocabulary=request.personal_vocabulary,
             )
@@ -140,8 +118,6 @@ async def _handle_adapt(request: VibeRequest, api_key: Optional[str]) -> VibeRes
             return await adapt_prompt(
                 recovery.normalized,
                 tone=tone,
-                profile=request.user_profile,
-                learning_context=request.learning_context,
                 conversation_context=conversation,
                 raw_original=prompt,
                 recovery_changes=recovery.changes,

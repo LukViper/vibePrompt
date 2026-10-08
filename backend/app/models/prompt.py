@@ -76,6 +76,7 @@ class VibeRequest(BaseModel):
     text: Optional[str] = Field(default=None, description="Alias for prompt")
     tone: Optional[str] = None
     conversation_context: list[ConversationMessage] = Field(default_factory=list)
+    # Kept optional for older clients; ignored by the adapt pipeline.
     user_profile: Optional[UserProfile] = None
     learning_context: Optional[LearningContextItem] = None
     personal_vocabulary: Optional[PersonalVocabulary] = None
@@ -104,12 +105,3 @@ class VibeResponse(BaseModel):
 class HealthResponse(BaseModel):
     status: str
     model: str
-
-
-class OnboardingAnswers(BaseModel):
-    answers: list[str] = Field(..., min_length=7, max_length=7)
-
-
-class ProfileResponse(BaseModel):
-    profile: UserProfile
-    source: str = "onboarding"

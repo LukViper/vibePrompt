@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from typing import Optional
 
-from app.models.prompt import ConversationMessage, LearningContextItem, UserProfile
+from app.models.prompt import ConversationMessage
 from app.services.tones import VALID_TONES
 
 _AMBIGUOUS = re.compile(
@@ -31,26 +31,6 @@ _TASK_VERBS = re.compile(
 )
 
 
-def _has_profile_signal(profile: Optional[UserProfile]) -> bool:
-    if not profile:
-        return False
-    return bool(
-        profile.learning_preferences
-        or profile.explanation_preferences
-        or profile.preferred_elements
-        or profile.response_length
-        or profile.technical_level
-        or profile.preferred_tone
-        or profile.learning_flags
-    )
-
-
-def _has_learning_signal(ctx: Optional[LearningContextItem]) -> bool:
-    if not ctx:
-        return False
-    return bool(ctx.subject.strip() or ctx.current_topic.strip())
-
-
 def _relevant_context(
     prompt: str,
     conversation: list[ConversationMessage],
@@ -58,7 +38,6 @@ def _relevant_context(
     """Keep last few messages; drop obviously unrelated long history later."""
     if not conversation:
         return []
-    # Cap to last 6 messages for cost
     return conversation[-6:]
 
 
@@ -66,13 +45,11 @@ def heuristic_decision(
     prompt: str,
     *,
     tone: Optional[str] = None,
-    profile: Optional[UserProfile] = None,
-    learning_context: Optional[LearningContextItem] = None,
     conversation: Optional[list[ConversationMessage]] = None,
 ) -> Optional[str]:
     """
     Return 'pass', 'ask', or None (needs LLM / adapt path).
-    Fast path: clear prompts with no personalization pressure → PASS (0 LLM).
+    Fast path: clear prompts with no tone pressure → PASS (0 LLM).
     """
     text = prompt.strip()
     if not text:
@@ -96,16 +73,14 @@ def heuristic_decision(
         return "ask"
 
     tone_set = bool(tone and tone in VALID_TONES)
-    wants_personalization = _has_profile_signal(profile) or _has_learning_signal(learning_context)
     messy = bool(
         re.search(r"\b(bro|idk|wtf|pls|plz|😭|😂|😭)\b", lowered)
         or ("..." in text and len(words) < 12)
     )
 
-    # Already clear, structured, no tone/profile pressure → PASS
+    # Already clear, structured, no tone pressure → PASS
     if (
         not tone_set
-        and not wants_personalization
         and not messy
         and len(words) >= 6
         and _TASK_VERBS.search(text)
@@ -113,14 +88,13 @@ def heuristic_decision(
     ):
         return "pass"
 
-    # Explicit "do not use analogy" etc. with clear task and no tone → often PASS
+    # Explicit constraints with clear task and no tone → often PASS
     if (
         not tone_set
         and not messy
         and len(words) >= 8
         and _TASK_VERBS.search(text)
         and re.search(r"\b(do not|don't|without|no analogy|formal)\b", lowered)
-        and not wants_personalization
     ):
         return "pass"
 

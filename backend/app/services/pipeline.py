@@ -6,9 +6,7 @@ from typing import Optional
 
 from app.models.prompt import (
     ConversationMessage,
-    LearningContextItem,
     PersonalVocabulary,
-    UserProfile,
     VibeResponse,
 )
 from app.services.optimizer import adapt_prompt
@@ -19,8 +17,6 @@ async def run_adapt_pipeline(
     raw_prompt: str,
     *,
     tone: Optional[str] = None,
-    profile: Optional[UserProfile] = None,
-    learning_context: Optional[LearningContextItem] = None,
     conversation_context: Optional[list[ConversationMessage]] = None,
     personal_vocabulary: Optional[PersonalVocabulary] = None,
 ) -> VibeResponse:
@@ -31,8 +27,6 @@ async def run_adapt_pipeline(
     result = await adapt_prompt(
         working,
         tone=tone,
-        profile=profile,
-        learning_context=learning_context,
         conversation_context=conversation_context,
         raw_original=raw_prompt,
         recovery_changes=recovery.changes,

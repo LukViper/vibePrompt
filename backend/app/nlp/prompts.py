@@ -87,9 +87,24 @@ intent must match the user's actual domain/goal."""
 VALID_TONES = ("Grill", "Neutral", "Encourage", "Simplify", "Professional")
 
 TONE_DESCRIPTIONS = {
-    "Grill": "high-intensity blunt criticism; roast weaknesses directly; no soft padding",
-    "Neutral": "balanced, clear, matter-of-fact; no emotional coloring",
-    "Encourage": "supportive, motivating, constructive; acknowledge strengths while guiding",
-    "Simplify": "plain language, ELI5 clarity; short sentences; avoid jargon",
-    "Professional": "formal, precise, business-appropriate; polished structure",
+    "Grill": (
+        "critically judge the given context/claims; blunt critique at the core; "
+        "challenge weak assumptions; no soft padding"
+    ),
+    "Neutral": (
+        "neither grilling nor encouraging; clear, matter-of-fact, balanced; "
+        "no emotional coloring"
+    ),
+    "Encourage": (
+        "reply encouragingly even if the idea is weak or something went wrong; "
+        "supportive, motivating; no harsh judgment"
+    ),
+    "Simplify": (
+        "simplify concepts and conversation; plain language; short sentences; "
+        "avoid jargon"
+    ),
+    "Professional": (
+        "professional GenAI output; formal, precise, business-appropriate; "
+        "polished structure"
+    ),
 }
