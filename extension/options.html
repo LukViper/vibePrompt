@@ -11,7 +11,7 @@
       <header class="vp-opts-header">
         <div>
           <h1>VibePrompt</h1>
-          <p class="vp-opts-tag">Minimal · personalized · context-aware</p>
+          <p class="vp-opts-tag">Minimal · context-aware · multi-chat</p>
         </div>
       </header>
 
@@ -45,28 +45,33 @@
             id="apiBaseUrl"
             name="apiBaseUrl"
             type="url"
-            placeholder="http://localhost:8000"
+            placeholder="https://vibeprompt.onrender.com"
             spellcheck="false"
           />
+          <span class="vp-hint"
+            >Default is the production API. Override with your own host (e.g.
+            <code>http://localhost:8000</code>). Saving may ask Chrome for host access.</span
+          >
+          <span id="backend-access" class="vp-hint vp-access" aria-live="polite"></span>
         </label>
 
-        <fieldset class="vp-field">
-          <legend class="vp-label">Learning context (optional)</legend>
-          <input id="lcSubject" type="text" placeholder="Subject — e.g. Operating Systems" />
-          <input id="lcResource" type="text" placeholder="Resource — e.g. Operating System Concepts" />
-          <input id="lcTopic" type="text" placeholder="Current topic — e.g. Process Management" />
-          <input id="lcLevel" type="text" placeholder="Level — beginner / intermediate / advanced" />
-          <span class="vp-hint">Used only when relevant to the current prompt.</span>
-        </fieldset>
+        <p class="vp-hint">
+          Works on ChatGPT, Claude, Gemini, Grok, DeepSeek, Perplexity, and Copilot. After you close
+          the panel with ×, click the extension icon on a chat tab to reopen it (⚙ in the panel, or
+          right‑click the icon → Options, for settings). Reload the chat tab after saving here.
+        </p>
 
         <div class="vp-actions">
           <button type="submit" class="vp-btn-primary">Save</button>
           <button type="button" id="clear-key" class="vp-btn-secondary">Clear API key</button>
-          <button type="button" id="reset-profile" class="vp-btn-secondary">Reset profile</button>
         </div>
 
         <p id="status" class="vp-status" role="status" aria-live="polite"></p>
       </form>
+
+      <footer class="vp-opts-footer">
+        <a href="privacy.html" target="_blank" rel="noopener noreferrer">Privacy policy</a>
+      </footer>
     </main>
     <script src="options.js"></script>
   </body>

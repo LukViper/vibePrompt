@@ -20,12 +20,10 @@ def estimate_tokens(text: str) -> int:
     return max(1, int(round(words * 1.3))) if text.strip() else 0
 
 
-def call_vibe(text: str, tone: str | None = None, profile: dict | None = None) -> dict:
+def call_vibe(text: str, tone: str | None = None) -> dict:
     payload: dict = {"prompt": text, "text": text}
     if tone:
         payload["tone"] = tone
-    if profile:
-        payload["user_profile"] = profile
     body = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(
         API,
@@ -59,7 +57,7 @@ def main() -> int:
             "human_emotional_fidelity": None,
         }
         try:
-            data = call_vibe(text, sample.get("tone"), sample.get("profile"))
+            data = call_vibe(text, sample.get("tone"))
             row["decision"] = data.get("decision")
             row["normalized_prompt"] = data.get("normalized_prompt")
             row["optimized_prompt"] = data.get("optimized_prompt")

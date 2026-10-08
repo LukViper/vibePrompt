@@ -54,6 +54,7 @@ pnpm-debug.log*
 *.crx
 web-ext-artifacts/
 .web-extension-id
+dist/
 
 # ----- TypeScript -----
 *.tsbuildinfo

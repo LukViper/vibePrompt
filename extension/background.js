@@ -1,4 +1,4 @@
-const DEFAULT_API_BASE = "http://localhost:8000";
+const DEFAULT_API_BASE = "https://vibeprompt.onrender.com";
 
 function storageGet(area, defaults) {
   return new Promise((resolve) => {
@@ -8,21 +8,28 @@ function storageGet(area, defaults) {
 
 async function getSettings() {
   const [local, sync] = await Promise.all([
-    storageGet("local", {
-      groqApiKey: "",
-      userProfile: null,
-      learningContext: null,
-      onboardingComplete: false,
-    }),
+    storageGet("local", { groqApiKey: "" }),
     storageGet("sync", { apiBaseUrl: DEFAULT_API_BASE }),
   ]);
   return {
     groqApiKey: (local.groqApiKey || "").trim(),
     apiBaseUrl: (sync.apiBaseUrl || DEFAULT_API_BASE).replace(/\/+$/, ""),
-    userProfile: local.userProfile || null,
-    learningContext: local.learningContext || null,
-    onboardingComplete: Boolean(local.onboardingComplete),
   };
+}
+
+function originPattern(apiBaseUrl) {
+  try {
+    const url = new URL(apiBaseUrl);
+    return `${url.protocol}//${url.host}/*`;
+  } catch {
+    return null;
+  }
+}
+
+function hasOriginAccess(pattern) {
+  return new Promise((resolve) => {
+    chrome.permissions.contains({ origins: [pattern] }, (ok) => resolve(Boolean(ok)));
+  });
 }
 
 function formatDetail(detail) {
@@ -41,8 +48,28 @@ function formatDetail(detail) {
   }
 }
 
-chrome.action.onClicked.addListener(() => {
-  chrome.runtime.openOptionsPage();
+function passFallback(text, changes) {
+  return {
+    decision: "pass",
+    original: text,
+    optimized_prompt: text,
+    changes,
+    estimated_token_change: 0,
+  };
+}
+
+chrome.action.onClicked.addListener((tab) => {
+  // On a supported chat tab: reopen the panel. Otherwise open Settings.
+  if (tab?.id == null) {
+    chrome.runtime.openOptionsPage();
+    return;
+  }
+
+  chrome.tabs.sendMessage(tab.id, { type: "SHOW_PANEL" }, (response) => {
+    if (chrome.runtime.lastError || !response?.ok) {
+      chrome.runtime.openOptionsPage();
+    }
+  });
 });
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
@@ -52,44 +79,17 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     return false;
   }
 
-  if (message?.type === "GET_PROFILE_STATE") {
-    getSettings()
-      .then((s) =>
-        sendResponse({
-          ok: true,
-          onboardingComplete: s.onboardingComplete,
-          userProfile: s.userProfile,
-          learningContext: s.learningContext,
-        })
-      )
-      .catch((err) => sendResponse({ ok: false, error: err?.message || "storage error" }));
-    return true;
-  }
-
-  if (message?.type === "SAVE_PROFILE") {
-    chrome.storage.local.set(
-      {
-        userProfile: message.profile || null,
-        onboardingComplete: true,
-      },
-      () => sendResponse({ ok: !chrome.runtime.lastError })
-    );
-    return true;
-  }
-
-  if (message?.type === "SAVE_LEARNING_CONTEXT") {
-    chrome.storage.local.set(
-      { learningContext: message.learningContext || null },
-      () => sendResponse({ ok: !chrome.runtime.lastError })
-    );
-    return true;
-  }
-
-  if (message?.type === "RESET_ONBOARDING") {
-    chrome.storage.local.set(
-      { onboardingComplete: false, userProfile: null },
-      () => sendResponse({ ok: !chrome.runtime.lastError })
-    );
+  if (message?.type === "CHECK_BACKEND_ACCESS") {
+    (async () => {
+      const { apiBaseUrl } = await getSettings();
+      const pattern = originPattern(apiBaseUrl);
+      if (!pattern) {
+        sendResponse({ ok: false, error: "Invalid backend URL", apiBaseUrl });
+        return;
+      }
+      const granted = await hasOriginAccess(pattern);
+      sendResponse({ ok: true, granted, apiBaseUrl, pattern });
+    })();
     return true;
   }
 
@@ -99,7 +99,30 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
   (async () => {
     try {
-      const { apiBaseUrl, groqApiKey, userProfile, learningContext } = await getSettings();
+      const { apiBaseUrl, groqApiKey } = await getSettings();
+      const pattern = originPattern(apiBaseUrl);
+      if (!pattern) {
+        sendResponse({
+          ok: false,
+          error: "Backend URL is invalid. Open VibePrompt Settings and fix it.",
+          needsKey: false,
+          fallback: passFallback(message.text, ["Invalid backend URL — using original"]),
+        });
+        return;
+      }
+
+      const granted = await hasOriginAccess(pattern);
+      if (!granted) {
+        sendResponse({
+          ok: false,
+          error:
+            "Backend access is not granted. Open VibePrompt Settings, save your Backend URL, and allow the permission prompt.",
+          needsKey: false,
+          fallback: passFallback(message.text, ["Backend permission missing — using original"]),
+        });
+        return;
+      }
+
       const headers = { "Content-Type": "application/json" };
       if (groqApiKey) {
         headers["X-Groq-Api-Key"] = groqApiKey;
@@ -110,8 +133,6 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         text: message.text,
         tone: message.tone || null,
         conversation_context: message.conversation_context || [],
-        user_profile: message.user_profile || userProfile || null,
-        learning_context: message.learning_context || learningContext || null,
         personal_vocabulary: message.personal_vocabulary || null,
       };
       if (groqApiKey) {
@@ -137,14 +158,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
             ? `${detail} Open VibePrompt Settings (extension icon) and paste your Groq API key.`
             : detail,
           needsKey: Boolean(needsKey),
-          // Soft fallback payload so UI can offer original
-          fallback: {
-            decision: "pass",
-            original: message.text,
-            optimized_prompt: message.text,
-            changes: ["VibePrompt unavailable — using original"],
-            estimated_token_change: 0,
-          },
+          fallback: passFallback(message.text, ["VibePrompt unavailable — using original"]),
         });
         return;
       }
@@ -155,14 +169,8 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         ok: false,
         error:
           err?.message ||
-          "Could not reach VibePrompt backend. Is it running on localhost:8000?",
-        fallback: {
-          decision: "pass",
-          original: message.text,
-          optimized_prompt: message.text,
-          changes: ["Backend unreachable — using original"],
-          estimated_token_change: 0,
-        },
+          "Could not reach the VibePrompt backend. Check Settings → Backend URL and that the API is running.",
+        fallback: passFallback(message.text, ["Backend unreachable — using original"]),
       });
     }
   })();

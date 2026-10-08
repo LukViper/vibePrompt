@@ -1,52 +1,43 @@
 # VibePrompt
 
-**Personalized, context-aware prompt adaptation for AI conversations.**
+**Context-aware, minimal prompt adaptation for GenAI chats.**
 
-> VibePrompt learns how you communicate and learn, understands the current conversation, and makes **only the changes that actually help** — without bloating your prompts.
+> VibePrompt reads what you typed, recovers messy typing, and makes **only the changes that actually help** — without bloating your prompts. No profile setup required.
 
 ---
 
-## What changed (v2.1 — revised plan)
+## Supported chats
 
-- **NLP recovery** before adapt (edit distance + char n-grams + generic abbreviations)
-- **Personal vocabulary** stored locally in the browser (`personalModel.js`)
-- **`POST /api/v1/adapt`** — v1 response shape (`normalized_prompt`, `adapted_prompt`, `confidence`)
-- **Quick setup** onboarding (~30s) + **Advanced** ChatGPT JSON onboarding
-- **ASK** clarifications → **Ask this in ChatGPT** (no invented topics)
-- **Live composer sync** tracks typing separately from last adapted result
-
-## What changed (v2)
-
-| Old | New |
-|-----|-----|
-| Always rewrite into a large “perfect” prompt | **PASS / ADAPT / ASK** decision engine |
-| Two LLM calls (analyze + generate) | **0 calls** when clear, **1 call** when adapting |
-| Generic optimization | Profile + conversation + learning context |
-| Copy-only UI | **Use adapted** / **Use original** into ChatGPT |
+| Site | URL |
+|------|-----|
+| ChatGPT | chatgpt.com |
+| Claude | claude.ai |
+| Gemini | gemini.google.com |
+| Grok | grok.x.com / x.com/i/grok |
+| DeepSeek | chat.deepseek.com |
+| Perplexity | perplexity.ai |
+| Copilot | copilot.microsoft.com |
 
 ---
 
 ## How it works
 
 ```
-User prompt + chat context + profile + learning context
-                         ↓
-                 Decision engine
-              /        |         \
-           PASS      ADAPT       ASK
-            │          │          │
-         original   minimal   clarification
-                    rewrite
+User prompt + chat context
+            ↓
+      Typing recovery (local)
+            ↓
+      Decision engine
+   /        |         \
+PASS      ADAPT       ASK
+ │          │          │
+original  minimal   clarification
+          rewrite
 ```
 
-Priority (never overridden incorrectly):
-
-1. Explicit current instruction  
-2. Conversation context  
-3. Explicit user preferences  
-4. Learned preferences (future)  
-5. Detected emotion/vibe (supporting only)  
-6. Defaults  
+- **PASS** — already clear → return as-is (**0 LLM calls**)
+- **ADAPT** — tidy slang / add clarity from context + optional tone chip
+- **ASK** — too vague to rewrite safely → one clarifying question
 
 ---
 
@@ -66,13 +57,21 @@ Health: http://127.0.0.1:8000/health
 ### Extension
 
 1. `chrome://extensions` → Developer mode → **Load unpacked** → `extension/`
-2. Click the extension icon → paste Groq API key (or use `backend/.env`)
-3. Open [chatgpt.com](https://chatgpt.com)
-4. Open [chatgpt.com](https://chatgpt.com)
-5. **Profile setup:** paste the setup prompt into ChatGPT, answer its questions, paste the JSON result into VibePrompt → **Save profile** (or skip)
-6. Type in ChatGPT — the panel **previews** your text (no API call)
-7. Click **Adapt now** once — that is the only Groq call for that prompt
-8. Review PASS / ADAPT / ASK → **Use adapted** or **Original**
+2. Click the extension icon → confirm **Backend URL** (default `https://vibeprompt.onrender.com`) → **Save** and allow host access
+3. Paste Groq API key (or set `GROQ_API_KEY` in `backend/.env`)
+4. Open any supported chat site
+5. Type in the composer — the panel **previews** your text (no API call)
+6. Click **Adapt now** → review PASS / ADAPT / ASK → **Use adapted** or **Original**
+
+Reload the chat tab after updating the extension.
+
+### Chrome Web Store package
+
+```bash
+./scripts/pack-extension.sh
+```
+
+Uploads go to `dist/vibeprompt-<version>.zip`. Listing copy, privacy disclosures, and promo assets: [`extension/store/STORE_LISTING.md`](extension/store/STORE_LISTING.md). Host [`extension/privacy.html`](extension/privacy.html) on a public HTTPS URL for the dashboard privacy-policy field.
 
 ---
 
@@ -80,11 +79,10 @@ Health: http://127.0.0.1:8000/health
 
 | Control | Action |
 |---------|--------|
-| **Adapt** | Run decision engine on the composer text |
-| **Use adapted** | Insert adapted prompt into ChatGPT |
+| **Adapt now** | Run decision engine on the composer text |
+| **Use adapted** | Insert adapted prompt into the chat composer |
 | **Original** | Insert original prompt |
 | Tone chips | Grill / Neutral / Encourage / Simplify / Professional |
-| **Profile** | Re-run onboarding |
 | **– / ×** | Minimize / exit (V restores) |
 
 ---
@@ -100,17 +98,7 @@ Health: http://127.0.0.1:8000/health
   "conversation_context": [
     { "role": "user", "content": "explain processes" },
     { "role": "assistant", "content": "..." }
-  ],
-  "user_profile": {
-    "learning_preferences": ["analogies", "examples"],
-    "response_length": "short",
-    "technical_level": "beginner",
-    "preferred_tone": "friendly"
-  },
-  "learning_context": {
-    "subject": "Operating Systems",
-    "current_topic": "Process Management"
-  }
+  ]
 }
 ```
 
@@ -120,11 +108,9 @@ Response:
 {
   "decision": "adapt",
   "original": "bro explain deadlock",
-  "optimized_prompt": "Explain deadlock simply using a real-world analogy and one concise example.",
-  "changes": ["Added analogy preference", "Kept concise length"],
-  "estimated_token_change": 8,
-  "original_tokens": 5,
-  "optimized_tokens": 13,
+  "optimized_prompt": "Explain deadlock clearly with a short real-world analogy.",
+  "changes": ["Clarified casual ask"],
+  "estimated_token_change": 6,
   "used_llm": true
 }
 ```
@@ -134,9 +120,7 @@ Response:
 ### Other routes
 
 - `GET /api/health`
-- `GET /api/onboarding` — question list
-- `POST /api/onboarding` — `{ "answers": ["...", ...] }` → profile
-- `POST /api/profile` — validate a client profile
+- `POST /api/v1/adapt` — compact response shape
 
 ---
 
@@ -145,19 +129,22 @@ Response:
 ```
 backend/app/
   main.py                 # API routes
-  models/prompt.py        # Request/response + profile models
+  models/prompt.py        # Request/response models
   services/
     decision_engine.py    # Heuristic PASS/ASK bypass
     optimizer.py          # Single-call minimal adapter
-    profile_engine.py     # Onboarding → profile
+    recovery.py           # Typo / abbrev recovery
     token_counter.py
     tones.py
   nlp/client.py           # Groq client (key stays server-side)
 
 extension/
-  content/                # Panel + ChatGPT context capture
-  background.js           # Proxy + profile storage
-  options.html            # API key + learning context
+  content/
+    sites.js              # Per-chat composers + context extractors
+    content.js            # Capture + API bridge
+    modal.js              # Panel UI
+  background.js           # Proxy + settings
+  options.html            # API key + backend URL
 ```
 
 ---
@@ -169,18 +156,16 @@ cd backend && source .venv/bin/activate
 python ../evaluation/run_eval.py
 ```
 
-See [`evaluation/README.md`](evaluation/README.md). Metrics now include decision rates and token Δ.
+See [`evaluation/README.md`](evaluation/README.md).
 
 ---
 
 ## Out of scope (for now)
 
-- Full textbook RAG / PDF chapter graphs  
-- Automatic preference learning from long history  
-- Auto-send into ChatGPT  
-- Sites other than ChatGPT  
-
-See [`update.md`](update.md) for the full product vision and later phases.
+- Profile / onboarding personalization  
+- Full textbook RAG  
+- Auto-send into the chat  
+- Guaranteeing every site DOM forever (selectors are best-effort fallbacks)
 
 ---
 

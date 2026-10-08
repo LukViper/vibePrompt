@@ -153,3 +153,28 @@ input:focus {
 .vp-status.is-error {
   color: var(--danger);
 }
+
+.vp-access {
+  display: block;
+  margin-top: 8px;
+}
+
+.vp-access.is-warn {
+  color: #d4a574;
+}
+
+.vp-opts-footer {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  font-size: 0.85rem;
+}
+
+.vp-opts-footer a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.vp-opts-footer a:hover {
+  text-decoration: underline;
+}
