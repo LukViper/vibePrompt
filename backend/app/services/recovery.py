@@ -32,6 +32,27 @@ GENERIC_ABBREV = {
     "oprating": "operating",
     "explian": "explain",
     "giv": "give",
+    # Common misspellings
+    "idas": "ideas",
+    "idea's": "ideas",
+    "recieve": "receive",
+    "seperate": "separate",
+    "occured": "occurred",
+    "definately": "definitely",
+    "wich": "which",
+    "becuase": "because",
+    "becasue": "because",
+    "teh": "the",
+    "taht": "that",
+    "waht": "what",
+    "howw": "how",
+    "mak": "make",
+    "moive": "movie",
+    "moviei": "movie",
+    "proejct": "project",
+    "porject": "project",
+    "exaple": "example",
+    "exmaple": "example",
 }
 
 COMMON_WORDS = frozenset(
@@ -40,6 +61,11 @@ COMMON_WORDS = frozenset(
     refactor design prove derive outline help this that with example examples
     using simple formal detailed please and the for in on to of a an is are
     algorithm python java linux thread process deadlock memory virtual tcp udp
+    make makes making movie movies idea ideas project projects code codes data
+    dataset how why what when where use uses using used give gives create creates
+    build builds show shows tell tells about from into over under after before
+    good better best bad wrong right short long clear clean prompt prompts chat
+    answer answers reply replies question questions step steps plan plans topic
     """.split()
 )
 
@@ -114,11 +140,16 @@ def _best_candidate(token: str, personal: PersonalVocabulary | None) -> tuple[st
     for word in COMMON_WORDS:
         if abs(len(word) - len(lower)) > 3:
             continue
-        if levenshtein(lower, word) > 2:
+        dist = levenshtein(lower, word)
+        if dist > 2:
             continue
         edit_sim = similarity(lower, word)
         ngram_sim = ngram_jaccard(lower, word)
-        score = 0.45 * edit_sim + 0.55 * ngram_sim
+        # Single-edit typos (idas→ideas) score poorly on short n-grams — boost them.
+        if dist == 1 and min(len(lower), len(word)) >= 3:
+            score = max(0.78, 0.65 * edit_sim + 0.35 * ngram_sim)
+        else:
+            score = 0.45 * edit_sim + 0.55 * ngram_sim
         if score > best_score:
             best_score = score
             best_word = word
